@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>College Voting System - Verify OTP</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .otp-inputs {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin: 32px 0;
+        }
+        .otp-input {
+            width: 50px;
+            height: 60px;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            border-radius: 12px;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #f8fafc;
+        }
+        .otp-input:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-wrapper">
+        <div class="auth-container">
+            <div class="brand">
+                <h1>Verification</h1>
+                <p>Enter the 6-digit code sent to your phone <br><strong>{{ phone }}</strong></p>
+            </div>
+            
+            <div class="otp-inputs" id="otpInputs">
+                <input type="text" maxlength="1" class="otp-input" autofocus>
+                <input type="text" maxlength="1" class="otp-input">
+                <input type="text" maxlength="1" class="otp-input">
+                <input type="text" maxlength="1" class="otp-input">
+                <input type="text" maxlength="1" class="otp-input">
+                <input type="text" maxlength="1" class="otp-input">
+            </div>
+
+            <button id="verifyBtn" class="btn">
+                Verify OTP
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5l10 -10"/></svg>
+            </button>
+            <div id="message" class="message"></div>
+            <p style="text-align: center; margin-top: 24px; color: var(--text-secondary); font-size: 0.875rem;">
+                Didn't receive the code? <a href="/" style="color: var(--primary); text-decoration: none; font-weight: 600;">Try again</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const inputs = document.querySelectorAll('.otp-input');
+        const verifyBtn = document.getElementById('verifyBtn');
+        const messageDiv = document.getElementById('message');
+
+        // Handle OTP input movement
+        inputs.forEach((input, index) => {
+            input.addEventListener('input', (e) => {
+                const val = e.target.value;
+                if (val.length === 1 && index < inputs.length - 1) {
+                    inputs[index + 1].focus();
+                }
+            });
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                    inputs[index - 1].focus();
+                }
+            });
+        });
+
+        verifyBtn.addEventListener('click', async () => {
+            let otp = '';
+            inputs.forEach(input => otp += input.value);
+
+            if (otp.length !== 6) {
+                messageDiv.className = 'message error';
+                messageDiv.innerHTML = 'Please enter all 6 digits.';
+                return;
+            }
+
+            verifyBtn.disabled = true;
+            verifyBtn.innerHTML = 'Verifying...';
+            messageDiv.className = 'message';
+            messageDiv.innerHTML = '';
+
+            const phone = new URLSearchParams(window.location.search).get('phone');
+            try {
+                const response = await fetch('/verify_otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ otp, phone })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    messageDiv.className = 'message success';
+                    messageDiv.innerHTML = 'Successfully verified! Redirecting to Dashboard...';
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 1500);
+                } else {
+                    messageDiv.className = 'message error';
+                    messageDiv.innerHTML = result.message;
+                    verifyBtn.disabled = false;
+                    verifyBtn.innerHTML = 'Verify OTP';
+                }
+            } catch (error) {
+                messageDiv.className = 'message error';
+                messageDiv.innerHTML = 'An error occurred. Please try again.';
+                verifyBtn.disabled = false;
+                verifyBtn.innerHTML = 'Verify OTP';
+            }
+        });
+    </script>
+</body>
+</html>

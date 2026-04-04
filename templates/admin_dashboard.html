@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Election Command Center - ElectraVoter</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <style>
+        .admin-header {
+            background: #1e293b; color: white; border-radius: 20px;
+            padding: 24px; margin-bottom: 32px; display: flex; justify-content: space-between; align-items: center;
+        }
+        .candidate-card-admin {
+            border: 1px dashed var(--border); border-radius: 12px; padding: 12px; display: flex; align-items: center; gap: 16px; margin-bottom: 10px;
+        }
+        .admin-controls { display: flex; gap: 8px; margin-left: auto; }
+        .btn-small { padding: 6px 12px; font-size: 0.7rem; border-radius: 6px; cursor: pointer; border: none; font-weight: 700; transition: 0.2s; }
+        .edit-btn { background: #f1f5f9; color: var(--text-primary); }
+        .delete-btn { background: #fef2f2; color: #ef4444; }
+        .add-btn { background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 12px; cursor: pointer; font-weight: 700; }
+        
+        .category-tab { display: flex; gap: 8px; background: #f1f5f9; padding: 6px; border-radius: 12px; margin-bottom: 24px; }
+        .tab-btn { flex: 1; border: none; padding: 10px; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; background: transparent; color: var(--text-secondary); }
+        .tab-btn.active { background: white; color: var(--primary); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        
+        .chart-container { position: relative; width: 100%; height: 320px; margin-bottom: 24px; }
+        .stats-badge { background: #ecfdf5; color: #10b981; padding: 4px 12px; border-radius: 6px; font-size: 1.25rem; font-weight: 800; border: 1px solid rgba(16,185,129,0.2); }
+        
+        .legend-row { display: flex; justify-content: center; gap: 24px; margin-top: 24px; flex-wrap: wrap; }
+        .legend-card { text-align: center; width: 80px; }
+        .legend-img { width: 65px; height: 65px; border-radius: 50%; border: 3.5px solid #f1f5f9; margin-bottom: 8px; object-fit: cover; }
+        .legend-name { font-size: 0.7rem; font-weight: 700; color: var(--text-secondary); }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-content { background: white; padding: 32px; border-radius: 24px; width: 100%; max-width: 450px; position: relative; }
+        
+        /* File Input Styling */
+        .file-upload-box {
+            border: 2px dashed var(--border); padding: 20px; border-radius: 12px; text-align: center; cursor: pointer; margin-top: 8px;
+        }
+        .file-upload-box:hover { border-color: var(--primary); background: #f8fafc; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container" style="max-width: 1100px;">
+        <header class="admin-header">
+            <div>
+                <h1 style="font-size: 1.35rem; margin-bottom: 4px;">Admin Control Center</h1>
+                <p style="font-size: 0.85rem; opacity: 0.8;">OFFICIAL ACCESS: {{ name }} ({{ designation }})</p>
+            </div>
+            <a href="/logout" style="color: white; text-decoration: none; font-weight: 700; font-size: 0.96rem; padding: 8px 16px; background: rgba(255,255,255,0.1); border-radius: 10px;">Log Out</a>
+        </header>
+
+        <div style="display: grid; grid-template-columns: 1fr 1.8fr; gap: 40px; align-items: start;">
+            <!-- Ballot List -->
+            <section class="voting-section" style="margin-top: 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                    <h2 style="font-size: 1.2rem; font-weight: 800;">Ballot Entries</h2>
+                    <button class="add-btn btn-small" onclick="openAddModal()">+ New</button>
+                </div>
+
+                <div class="voting-section" style="margin-top: 0; padding: 20px; background: #f8fafc; border: 1px solid var(--border); margin-bottom: 24px;">
+                    <h3 style="font-size: 0.9rem; font-weight: 800; margin-bottom: 16px;">Voting Schedule</h3>
+                    <div style="display: grid; gap: 12px;">
+                        <div>
+                            <label style="font-size: 0.7rem; font-weight: 800; color: var(--text-secondary);">START TIME</label>
+                            <input type="datetime-local" id="startTime" class="form-control" style="width: 100%;" value="{{ time.strftime('%Y-%m-%dT%H:%M', time.localtime(settings.voting_start_time)) if settings.voting_start_time else '' }}">
+                        </div>
+                        <div>
+                            <label style="font-size: 0.7rem; font-weight: 800; color: var(--text-secondary);">END TIME</label>
+                            <input type="datetime-local" id="endTime" class="form-control" style="width: 100%;" value="{{ time.strftime('%Y-%m-%dT%H:%M', time.localtime(settings.voting_end_time)) if settings.voting_end_time else '' }}">
+                        </div>
+                        <button class="btn btn-small" style="background: var(--primary); color: white; margin-top: 8px;" onclick="updateSchedule()">Save Schedule</button>
+                    </div>
+                </div>
+
+                {% for cat in candidates %}
+                <label style="font-size: 0.7rem; color: var(--text-secondary); font-weight: 800; display: block; margin: 16px 0 8px;">{{ cat.replace('_', ' ').upper() }}</label>
+                {% for c in candidates[cat] %}
+                <div class="candidate-card-admin">
+                    <img src="{{ c.image }}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+                    <div style="font-weight: 700; font-size: 0.85rem;">{{ c.name }}</div>
+                    <div class="admin-controls">
+                        <button class="btn-small edit-btn" onclick="openEditModal('{{ cat }}', '{{ c.id }}', '{{ c.name }}')">Edit</button>
+                        <button class="btn-small delete-btn" onclick="deleteCandidate('{{ cat }}', '{{ c.id }}', '{{ c.name }}')">Delete</button>
+                    </div>
+                </div>
+                {% endfor %}
+                {% endfor %}
+            </section>
+
+            <!-- Results -->
+            <section class="voting-section" style="margin-top: 0; background: #ffffff; padding: 32px; border-radius: 24px; border: 1px solid var(--border);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
+                    <h2 style="font-size: 1.25rem; font-weight: 800;">Live Tally View</h2>
+                    <div class="stats-badge">{{ total_votes }} Total</div>
+                </div>
+                <div class="category-tab">
+                    {% for cat in candidates %}
+                    <button class="tab-btn {% if loop.first %}active{% endif %}" id="tab-{{ cat.replace(' ', '_') }}" onclick="displayChart('{{ cat }}')">{{ cat.replace('_', ' ').title() }}</button>
+                    {% endfor %}
+                </div>
+                <div class="chart-container"><canvas id="electionChart"></canvas></div>
+                <div id="graphLegend" class="legend-row"></div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <div class="modal" id="candidateModal">
+        <div class="modal-content">
+            <span style="position: absolute; top: 15px; right: 20px; font-size: 1.5rem; cursor: pointer; color: var(--text-secondary);" onclick="closeModal()">&times;</span>
+            <h3 id="modalTitle">Candidate Info</h3>
+            <form id="candidateForm" enctype="multipart/form-data">
+                <input type="hidden" id="modalId" name="id">
+                <input type="hidden" id="modalAction" value="add">
+                
+                <div class="form-group">
+                    <label>Candidate Name</label>
+                    <input type="text" id="newName" name="name" placeholder="Full Name" required>
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <input type="text" id="newCategory" name="category" list="categoryList" placeholder="Enter Category (e.g. Secretary)" required style="width: 100%; height: 48px; border-radius: 12px; border: 1.5px solid var(--border); padding: 0 16px;">
+                    <datalist id="categoryList">
+                        {% for cat in candidates %}
+                        <option value="{{ cat }}">
+                        {% endfor %}
+                    </datalist>
+                </div>
+                <div class="form-group">
+                    <label>Candidate Portrait</label>
+                    <div class="file-upload-box" onclick="document.getElementById('newImageFile').click()">
+                        <span id="fileLabel">Click to Upload Image</span>
+                        <input type="file" id="newImageFile" name="image" style="display: none;" accept="image/*" onchange="updateFileName(this)">
+                    </div>
+                </div>
+                
+                <button type="submit" id="addSubmitBtn" class="btn" style="margin-top: 20px;">Save Candidate</button>
+                <div id="addMessage" class="message"></div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        Chart.register(ChartDataLabels);
+        const ctx = document.getElementById('electionChart').getContext('2d');
+        let myChart;
+        const candidates = {{ candidates|tojson | safe }};
+        const results = {{ results|tojson | safe }};
+        const totalVotes = {{ total_votes }};
+
+        function updateFileName(input) {
+            const label = document.getElementById('fileLabel');
+            label.innerText = input.files[0] ? input.files[0].name : 'Click to Upload Image';
+        }
+
+        function displayChart(category) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            const activeTab = document.getElementById(`tab-${category.replace(' ', '_')}`);
+            if (activeTab) activeTab.classList.add('active');
+            const currentCandidates = candidates[category];
+            const labels = currentCandidates.map(c => c.name);
+            const dataValues = currentCandidates.map(c => results[category][c.id]);
+            const colors = ['#2563eb', '#7c3aed', '#ec4899', '#10b981'];
+            if (myChart) myChart.destroy();
+            myChart = new Chart(ctx, {
+                type: 'bar',
+                data: { labels: labels, datasets: [{ data: dataValues, backgroundColor: colors, borderRadius: 12, barThickness: 50 }] },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, datalabels: { anchor: 'end', align: 'top', color: '#10b981', font: { weight: 'bold', size: 14 }, formatter: (v) => totalVotes === 0 ? '0%' : ((v/totalVotes)*100).toFixed(1)+'%' } },
+                    scales: { y: { beginAtZero: true, grid: { display: false }, grace: '20%' }, x: { grid: { display: false } } },
+                    animation: { duration: 1500, easing: 'easeOutBack' },
+                    animations: { y: { from: (ctx) => ctx.chart.scales.y.getPixelForValue(0), duration: 1500, easing: 'easeOutBack' } }
+                }
+            });
+            const legendDiv = document.getElementById('graphLegend'); legendDiv.innerHTML = '';
+            currentCandidates.forEach(c => { legendDiv.innerHTML += `<div class="legend-card"><img src="${c.image}" class="legend-img" style="object-fit: cover;"><div class="legend-name">${c.name.split(' ')[0]}</div></div>`; });
+        }
+        // Initial display
+        {% if candidates %}
+        displayChart('{{ (candidates.keys() | list)[0] }}');
+        {% endif %}
+
+        function openAddModal() {
+            document.getElementById('modalTitle').innerText = 'Add New Candidate';
+            document.getElementById('modalAction').value = 'add';
+            document.getElementById('newName').value = '';
+            document.getElementById('candidateForm').reset();
+            document.getElementById('fileLabel').innerText = 'Click to Upload Image';
+            document.getElementById('candidateModal').style.display = 'flex';
+        }
+
+        function openEditModal(cat, id, name) {
+            document.getElementById('modalTitle').innerText = 'Edit Candidate';
+            document.getElementById('modalAction').value = 'edit';
+            document.getElementById('modalId').value = id;
+            document.getElementById('newCategory').value = cat;
+            document.getElementById('newName').value = name;
+            document.getElementById('fileLabel').innerText = 'Current Photo (Click to Change)';
+            document.getElementById('candidateModal').style.display = 'flex';
+        }
+
+        function closeModal() { document.getElementById('candidateModal').style.display = 'none'; }
+
+        async function deleteCandidate(cat, id, name) {
+            if (confirm(`Remove ${name}?`)) {
+                const res = await fetch(`/delete-candidate/${cat}/${id}`, { method: 'POST' });
+                if ((await res.json()).success) window.location.reload();
+            }
+        }
+
+        document.getElementById('candidateForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const action = document.getElementById('modalAction').value;
+            const endpoint = action === 'add' ? '/add-candidate' : '/edit-candidate';
+            
+            const formData = new FormData(document.getElementById('candidateForm'));
+            
+            try {
+                const res = await fetch(endpoint, { method: 'POST', body: formData });
+                const result = await res.json();
+                if (result.success) window.location.reload();
+                else alert(result.message);
+            } catch (err) { alert('Upload failed'); }
+        });
+
+        async function updateSchedule() {
+            const startTime = document.getElementById('startTime').value;
+            const endTime = document.getElementById('endTime').value;
+            
+            if (!startTime || !endTime) {
+                alert("Please set both start and end times");
+                return;
+            }
+
+            const res = await fetch('/update-settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ start_time: startTime, end_time: endTime })
+            });
+
+            const result = await res.json();
+            if (result.success) {
+                alert("Schedule updated successfully!");
+                window.location.reload();
+            } else {
+                alert("Error: " + result.message);
+            }
+        }
+    </script>
+</body>
+</html>

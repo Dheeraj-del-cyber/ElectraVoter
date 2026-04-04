@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - ElectraVoter</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="auth-wrapper">
+        <div class="auth-container">
+            <div class="brand">
+                <h1 style="background: linear-gradient(135deg, #ef4444, #7c3aed); -webkit-background-clip: text; background-clip: text;">Admin Panel</h1>
+                <p>Official Authority Access Only</p>
+            </div>
+            <form id="adminLoginForm">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="adminName" placeholder="Admin Name" required>
+                </div>
+                <div class="form-group">
+                    <label>Designation</label>
+                    <input type="text" id="designation" placeholder="e.g. Chief Election Officer" required>
+                </div>
+                <div class="form-group">
+                    <label>Access Password</label>
+                    <input type="password" id="password" placeholder="••••••••" required>
+                </div>
+                <button type="submit" id="adminSubmitBtn" class="btn" style="background: #1e293b;">
+                    Enter Admin Portal
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </button>
+                <div id="adminMessage" class="message"></div>
+                
+                <p style="text-align: center; margin-top: 24px; font-size: 0.85rem; color: var(--text-secondary);">
+                    Regular student? <a href="/" style="color: var(--primary); text-decoration: none; font-weight: 600;">Back to Login</a>
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const adminForm = document.getElementById('adminLoginForm');
+        const submitBtn = document.getElementById('adminSubmitBtn');
+        const messageDiv = document.getElementById('adminMessage');
+
+        adminForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const name = document.getElementById('adminName').value;
+            const designation = document.getElementById('designation').value;
+            const password = document.getElementById('password').value;
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = 'Verifying Authority...';
+
+            try {
+                const response = await fetch('/admin-login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, designation, password })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    messageDiv.className = 'message success';
+                    messageDiv.innerHTML = 'Access Granted. Redirecting...';
+                    setTimeout(() => {
+                        window.location.href = '/admin-dashboard';
+                    }, 1000);
+                } else {
+                    messageDiv.className = 'message error';
+                    messageDiv.innerHTML = result.message;
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Enter Admin Portal';
+                }
+            } catch (error) {
+                messageDiv.className = 'message error';
+                messageDiv.innerHTML = 'Server error. Try again later.';
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Enter Admin Portal';
+            }
+        });
+    </script>
+</body>
+</html>

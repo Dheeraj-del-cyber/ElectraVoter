@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voting Dashboard - ElectraVoter</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        .vote-btn-mock {
+            width: 100%; padding: 10px; background: #f1f5f9; color: var(--text-primary);
+            border-radius: 8px; font-size: 0.85rem; font-weight: 700; margin-top: 12px;
+            transition: all 0.3s ease; display: flex; justify-content: center; align-items: center; gap: 6px;
+        }
+        .candidate-card.selected .vote-btn-mock { background: var(--primary); color: #ffffff; }
+        .confirmation-card {
+            background: #ffffff; border: 1px solid var(--border); border-radius: 16px;
+            padding: 16px; display: flex; align-items: center; gap: 16px; text-align: left;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+        .conf-img { width: 100px; height: 100px; border-radius: 50%; border: 4px solid var(--primary); object-fit: cover; }
+        .receipt-card {
+            background: #ffffff; border: 2px dashed var(--primary); border-radius: 16px;
+            padding: 32px; max-width: 450px; margin: 0 auto; position: relative;
+        }
+        .receipt-item { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f5f9; }
+        .receipt-label { color: var(--text-secondary); font-weight: 600; font-size: 0.85rem; }
+        .receipt-value { font-weight: 700; color: var(--text-primary); }
+        .voting-id-badge {
+            background: #eff6ff; color: var(--primary); padding: 8px 16px; border-radius: 8px;
+            font-family: 'Courier New', Courier, monospace; font-weight: 800; letter-spacing: 2px;
+            display: inline-block; margin-top: 8px;
+        }
+        .voted-status-card {
+            background: #f8fafc; border: 1px solid var(--border); border-radius: 20px;
+            padding: 48px; text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container" id="dashboardContent">
+        <header class="navbar">
+            <div class="brand"><h1 style="font-size: 1.5rem; margin-bottom: 0;">ElectraVoter</h1></div>
+            <div class="user-tag">Welcome, <span id="userName">{{ name }}</span> | <a href="/logout" style="color: var(--error); text-decoration: none; margin-left: 8px;">Logout</a></div>
+        </header>
+
+        {% if voting_status != 'active' %}
+        <div style="background: {% if voting_status == 'ended' %}#fef2f2{% else %}#eff6ff{% endif %}; border: 1px solid {% if voting_status == 'ended' %}#fee2e2{% else %}#dbeafe{% endif %}; padding: 16px; border-radius: 12px; margin-bottom: 24px; text-align: center;">
+            <p style="font-weight: 700; color: {% if voting_status == 'ended' %}#dc2626{% else %}#2563eb{% endif %};">{{ status_message }}</p>
+        </div>
+        {% endif %}
+
+        {% if has_voted %}
+        <!-- Already Voted Screen (Shown after returning to dashboard) -->
+        <div class="voted-status-card">
+            <div style="font-size: 4rem; margin-bottom: 24px;">⛔</div>
+            <h2 style="font-size: 1.75rem; margin-bottom: 12px;">You have already Voted!</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 32px;">Multiple votes from the same student account are not permitted. Your transaction is securely recorded.</p>
+            <div style="border-top: 1px solid var(--border); padding-top: 24px;">
+                <p style="font-size: 0.85rem; color: var(--text-secondary);">If you haven't saved your receipt, please contact the administration.</p>
+            </div>
+            <a href="/logout" class="btn" style="max-width: 250px; margin: 32px auto 0; background: #f1f5f9; color: var(--text-primary);">Finish & Logout</a>
+        </div>
+        {% else %}
+        <div id="votingGridView">
+            <div class="brand" style="text-align: left; margin-bottom: 32px;">
+                <h2 style="font-size: 1.75rem;">Cast Your Vote</h2>
+                <p>Choose your Preferred Candidates.</p>
+            </div>
+            <form id="votingForm">
+                {% for cat, cat_candidates in candidates.items() %}
+                <section class="voting-section">
+                    <h3 class="section-title">{{ cat.replace('_', ' ').title() }}</h3>
+                    <div class="candidate-grid">
+                        {% for c in cat_candidates %}
+                        <div class="candidate-card" onclick="selectCandidate('{{ cat }}', '{{ c.id }}')">
+                            <img src="{{ c.image }}" alt="{{ c.name }}" class="candidate-image">
+                            <div class="candidate-name">{{ c.name }}</div>
+                            <div class="vote-btn-mock" id="btn_{{ cat }}_{{ c.id }}"><span class="btn-text">Select to Vote</span></div>
+                            <input type="radio" name="{{ cat }}" value="{{ c.id }}" data-name="{{ c.name }}" data-category="{{ cat }}" data-img="{{ c.image }}" id="{{ cat }}_{{ c.id }}" class="vote-radio" required style="display:none">
+                        </div>
+                        {% endfor %}
+                    </div>
+                </section>
+                {% endfor %}
+                <div class="submit-container">
+                    {% if voting_status == 'active' %}
+                    <button type="button" onclick="showConfirmation()" id="reviewBtn" class="btn" style="max-width: 320px; margin: 0 auto;">Next Step: Confirm Vote</button>
+                    {% else %}
+                    <button type="button" disabled class="btn" style="max-width: 320px; margin: 0 auto; background: #cbd5e1; cursor: not-allowed;">Voting Closed</button>
+                    {% endif %}
+                    <div id="voteMessage" class="message"></div>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+
+        <div id="confirmationView" style="display: none; text-align: center; padding: 20px 0;">
+            <div class="brand" style="text-align: center; margin-bottom: 40px;"><h2>Confirm Selection</h2><p>Verify your choice and confirm your vote.</p></div>
+            <div id="confirmationList" style="display: flex; flex-direction: column; gap: 20px; max-width: 500px; margin: 0 auto 48px;">
+                <!-- Dynamically Populated -->
+            </div>
+            <div style="display: flex; gap: 12px; justify-content: center; max-width: 500px; margin: 0 auto;"><button type="button" onclick="hideConfirmation()" class="btn" style="background: #f1f5f9; color: var(--text-primary);">Edit Choices</button><button type="button" onclick="finalSubmit()" id="finalSubmitBtn" class="btn">Confirm & Submit Vote</button></div>
+            <div id="finalMessage" class="message"></div>
+        </div>
+    </div>
+
+    <!-- Final Receipt Screen (Temporary) -->
+    <div class="dashboard-container success-screen" id="successScreen" style="display: none;">
+        <div style="font-size: 4rem; margin-bottom: 24px;">✅</div>
+        <h1 style="color: var(--success); margin-bottom: 24px;">Vote Recorded</h1>
+        <div class="receipt-card" id="receiptArea">
+            <div style="margin-bottom: 24px; text-align: center;"><h3 style="font-size: 1.25rem; font-weight: 800;">OFFICIAL VOTING RECEIPT</h3><p style="font-size: 0.75rem; color: var(--text-secondary);">Audit generated by ElectraVoter System</p></div>
+            <div class="receipt-item"><span class="receipt-label">Student Name</span><span class="receipt-value" id="res_name">-</span></div>
+            <div class="receipt-item"><span class="receipt-label">USN</span><span class="receipt-value" id="res_usn">-</span></div>
+            <div class="receipt-item" style="flex-direction: column; align-items: center; border-bottom: none; margin-top: 16px;"><span class="receipt-label">UNIQUE VOTING ID</span><span class="voting-id-badge" id="res_voting_id">-</span></div>
+            <div style="margin-top: 32px; border-top: 1px solid #f1f5f9; padding-top: 16px; font-size: 0.7rem; color: var(--text-secondary);">* Keep this Transaction ID for your records to verify your vote.</div>
+        </div>
+        <div style="margin-top: 40px; display: flex; flex-direction: column; align-items: center; gap: 16px;">
+            <button onclick="downloadReceipt()" class="btn" style="max-width: 280px; background: #334155;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download Receipt as PDF
+            </button>
+            <button onclick="location.reload()" class="btn" style="max-width: 250px; background: #f1f5f9; color: var(--text-primary);">Finish & Back to Dashboard</button>
+        </div>
+    </div>
+
+    <script>
+        function downloadReceipt() {
+            const element = document.getElementById('receiptArea');
+            const usn = document.getElementById('res_usn').innerText;
+            const options = {
+                margin: [10, 10, 10, 10], filename: `Voting_Receipt_${usn}.pdf`,
+                image: { type: 'jpeg', quality: 1.0 },
+                html2canvas: { scale: 3, useCORS: true, letterRendering: true, scrollY: 0 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().from(element).set(options).save();
+        }
+
+        function selectCandidate(category, id) {
+            const radioId = `${category}_${id}`;
+            const radio = document.getElementById(radioId);
+            if (!radio) return;
+            const section = radio.closest('.voting-section');
+            section.querySelectorAll('.candidate-card').forEach(card => card.classList.remove('selected'));
+            section.querySelectorAll('.btn-text').forEach(text => text.innerText = 'Select to Vote');
+            radio.checked = true;
+            radio.closest('.candidate-card').classList.add('selected');
+            document.getElementById(`btn_${category}_${id}`).querySelector('.btn-text').innerText = 'Selected ✔';
+        }
+
+        function showConfirmation() {
+            const categories = [...new Set([...document.querySelectorAll('.vote-radio')].map(r => r.name))];
+            const selections = [];
+            let allSelected = true;
+
+            categories.forEach(cat => {
+                const selected = document.querySelector(`input[name="${cat}"]:checked`);
+                if (!selected) allSelected = false;
+                else selections.push({ category: cat, name: selected.dataset.name, img: selected.dataset.img });
+            });
+
+            if (!allSelected) {
+                const msg = document.getElementById('voteMessage');
+                msg.className = 'message error'; msg.innerHTML = 'Please select a candidate FROM ALL categories.';
+                msg.style.display = 'block'; return;
+            }
+
+            const confList = document.getElementById('confirmationList');
+            confList.innerHTML = '';
+            selections.forEach(s => {
+                confList.innerHTML += `
+                    <div class="confirmation-card">
+                        <img src="${s.img}" class="conf-img">
+                        <div>
+                            <label style="color: var(--primary); font-size: 0.7rem; font-weight: 800; text-transform: uppercase;">${s.category.replace('_', ' ')} Choice</label>
+                            <div style="font-size: 1.25rem; font-weight: 700;">${s.name}</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('votingGridView').style.display = 'none';
+            document.getElementById('confirmationView').style.display = 'block';
+        }
+
+        function hideConfirmation() {
+            document.getElementById('confirmationView').style.display = 'none';
+            document.getElementById('votingGridView').style.display = 'block';
+        }
+
+        async function finalSubmit() {
+            const votes = {};
+            document.querySelectorAll('.vote-radio:checked').forEach(r => {
+                votes[r.name] = r.value;
+            });
+            const finalBtn = document.getElementById('finalSubmitBtn');
+            const finalMsg = document.getElementById('finalMessage');
+            finalBtn.disabled = true; finalBtn.innerText = 'Casting...';
+            try {
+                const response = await fetch('/submit-vote', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ votes })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    document.getElementById('res_name').innerText = result.receipt.name;
+                    document.getElementById('res_usn').innerText = result.receipt.usn;
+                    document.getElementById('res_voting_id').innerText = result.receipt.voting_id;
+                    document.getElementById('dashboardContent').style.display = 'none';
+                    document.getElementById('successScreen').style.display = 'block';
+                } else {
+                    finalMsg.className = 'message error'; finalMsg.innerHTML = result.message;
+                    finalMsg.style.display = 'block'; finalBtn.disabled = false; finalBtn.innerText = 'Confirm & Submit Vote';
+                }
+            } catch (error) {
+                finalMsg.className = 'message error'; finalMsg.innerHTML = 'Network Error. Try again.';
+                finalMsg.style.display = 'block'; finalBtn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
