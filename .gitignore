@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+ENV/
+
+# Flask/Env
+.env
+instance/
+.pytest_cache/
+
+# OS/IDE
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Project Specific
+static/uploads/*
+!static/uploads/.gitkeep
