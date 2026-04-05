@@ -39,16 +39,23 @@ def check_voting_status():
     start_time = settings.get('voting_start_time')
     end_time = settings.get('voting_end_time')
     
-    if not start_time or not end_time:
-        return "active", "Voting is currently open (No schedule set)"
+    # If no times are set at all
+    if start_time is None and end_time is None:
+        return "active", "Voting is currently open (No schedule set)", None
         
-    if current_time < start_time:
-        return "not_started", f"Voting has not started yet. Starts at {time.strftime('%Y-%m-%d %H:%M', time.localtime(start_time))}"
+    # Check Start Time if set
+    if start_time is not None and current_time < start_time:
+        return "not_started", f"Voting has not started yet. Starts at {time.strftime('%Y-%m-%d %H:%M', time.localtime(start_time))}", start_time
     
-    if current_time > end_time:
-        return "ended", f"Voting has ended. Finished at {time.strftime('%Y-%m-%d %H:%M', time.localtime(end_time))}"
+    # Check End Time if set
+    if end_time is not None and current_time > end_time:
+        return "ended", f"Voting has ended. Finished at {time.strftime('%Y-%m-%d %H:%M', time.localtime(end_time))}", end_time
         
-    return "active", f"Voting ends at {time.strftime('%Y-%m-%d %H:%M', time.localtime(end_time))}"
+    # If we are between start and end, or only one is set and we are within it
+    if end_time is not None:
+        return "active", f"Voting ends at {time.strftime('%Y-%m-%d %H:%M', time.localtime(end_time))}", end_time
+    
+    return "active", "Voting is currently open", None
 
 # Initial Seed Data (if DB is empty)
 def seed_candidates():
@@ -88,7 +95,7 @@ def send_otp():
     user_hash = generate_hash(f"{usn}{phone}")
     
     # 🛡️ SECURITY CHECK: Voting time
-    status, message = check_voting_status()
+    status, message, target_ts = check_voting_status()
     if status != "active":
         return jsonify({"success": False, "message": message}), 403
 
@@ -128,10 +135,11 @@ def index():
     if session.get('authenticated'):
         return redirect(url_for('dashboard'))
     
-    status, status_message = check_voting_status()
+    status, status_message, target_ts = check_voting_status()
     return render_template('index.html', 
                           voting_status=status, 
                           status_message=status_message,
+                          target_ts=target_ts,
                           time=time)
 
 @app.route('/dashboard')
@@ -152,7 +160,7 @@ def dashboard():
         grouped_candidates[cat].append(c)
     
     # Get voting status
-    status, status_message = check_voting_status()
+    status, status_message, target_ts = check_voting_status()
     
     return render_template('dashboard.html', 
                           name=session.get('user_name'), 
@@ -160,6 +168,7 @@ def dashboard():
                           has_voted=user_voted,
                           voting_status=status,
                           status_message=status_message,
+                          target_ts=target_ts,
                           time=time)
 
 @app.route('/submit-vote', methods=['POST'])
@@ -170,7 +179,7 @@ def submit_vote():
     user_hash = generate_hash(f"{session.get('usn')}{session.get('phone')}")
     
     # 🛡️ FINAL DOUBLE CHECK: Voting time
-    status, message = check_voting_status()
+    status, message, target_ts = check_voting_status()
     if status != "active":
         return jsonify({"success": False, "message": message}), 403
 
@@ -276,9 +285,17 @@ def update_settings():
     end_time_str = data.get('end_time')
     
     try:
-        # Convert HTML5 datetime-local string to timestamp
-        start_ts = time.mktime(time.strptime(start_time_str, "%Y-%m-%dT%H:%M")) if start_time_str else None
-        end_ts = time.mktime(time.strptime(end_time_str, "%Y-%m-%dT%H:%M")) if end_time_str else None
+        def parse_dt(dt_str):
+            if not dt_str: return None
+            for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M"):
+                try:
+                    return time.mktime(time.strptime(dt_str, fmt))
+                except ValueError:
+                    continue
+            raise ValueError(f"Invalid format: {dt_str}")
+
+        start_ts = parse_dt(start_time_str)
+        end_ts = parse_dt(end_time_str)
         
         sdb.update_one({"id": "global_settings"}, {"$set": {
             "voting_start_time": start_ts,
@@ -286,6 +303,7 @@ def update_settings():
         }})
         return jsonify({"success": True})
     except Exception as e:
+        print(f"Update settings error: {e}")
         return jsonify({"success": False, "message": str(e)}), 400
 
 @app.route('/add-candidate', methods=['POST'])

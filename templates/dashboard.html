@@ -44,9 +44,14 @@
             <div class="user-tag">Welcome, <span id="userName">{{ name }}</span> | <a href="/logout" style="color: var(--error); text-decoration: none; margin-left: 8px;">Logout</a></div>
         </header>
 
-        {% if voting_status != 'active' %}
-        <div style="background: {% if voting_status == 'ended' %}#fef2f2{% else %}#eff6ff{% endif %}; border: 1px solid {% if voting_status == 'ended' %}#fee2e2{% else %}#dbeafe{% endif %}; padding: 16px; border-radius: 12px; margin-bottom: 24px; text-align: center;">
-            <p style="font-weight: 700; color: {% if voting_status == 'ended' %}#dc2626{% else %}#2563eb{% endif %};">{{ status_message }}</p>
+        {% if voting_status != 'active' or target_ts %}
+        <div id="statusNotification" style="background: {% if voting_status == 'ended' %}#fef2f2{% elif voting_status == 'not_started' %}#eff6ff{% else %}#ecfdf5{% endif %}; border: 1px solid {% if voting_status == 'ended' %}#fee2e2{% elif voting_status == 'not_started' %}#dbeafe{% else %}#10b981{% endif %}; padding: 16px; border-radius: 12px; margin-bottom: 24px; text-align: center;">
+            <p id="statusMsg" style="font-weight: 700; color: {% if voting_status == 'ended' %}#dc2626{% elif voting_status == 'not_started' %}#2563eb{% else %}#059669{% endif %}; margin-bottom: 8px;">{{ status_message }}</p>
+            {% if target_ts %}
+            <div id="countdown" style="font-family: monospace; font-size: 1.25rem; font-weight: 800; color: var(--text-primary);">
+                00:00:00:00
+            </div>
+            {% endif %}
         </div>
         {% endif %}
 
@@ -126,6 +131,32 @@
     </div>
 
     <script>
+        {% if target_ts %}
+        const targetTime = {{ target_ts }} * 1000;
+        const countdownTimer = setInterval(() => {
+            const now = new Date().getTime();
+            const distance = targetTime - now;
+
+            if (distance < 0) {
+                clearInterval(countdownTimer);
+                document.getElementById('countdown').innerHTML = "EXPIRED";
+                location.reload(); 
+                return;
+            }
+
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+            document.getElementById('countdown').innerHTML = 
+                (days > 0 ? days + "d " : "") + 
+                hours.toString().padStart(2, '0') + ":" + 
+                minutes.toString().padStart(2, '0') + ":" + 
+                seconds.toString().padStart(2, '0');
+        }, 1000);
+        {% endif %}
+
         function downloadReceipt() {
             const element = document.getElementById('receiptArea');
             const usn = document.getElementById('res_usn').innerText;
