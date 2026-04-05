@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,47 +9,115 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         .vote-btn-mock {
-            width: 100%; padding: 10px; background: #f1f5f9; color: var(--text-primary);
-            border-radius: 8px; font-size: 0.85rem; font-weight: 700; margin-top: 12px;
-            transition: all 0.3s ease; display: flex; justify-content: center; align-items: center; gap: 6px;
+            width: 100%;
+            padding: 10px;
+            background: #f1f5f9;
+            color: var(--text-primary);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-top: 12px;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
         }
-        .candidate-card.selected .vote-btn-mock { background: var(--primary); color: #ffffff; }
+
+        .candidate-card.selected .vote-btn-mock {
+            background: var(--primary);
+            color: #ffffff;
+        }
+
         .confirmation-card {
-            background: #ffffff; border: 1px solid var(--border); border-radius: 16px;
-            padding: 16px; display: flex; align-items: center; gap: 16px; text-align: left;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            text-align: left;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
-        .conf-img { width: 100px; height: 100px; border-radius: 50%; border: 4px solid var(--primary); object-fit: cover; }
+
+        .conf-img {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            border: 4px solid var(--primary);
+            object-fit: cover;
+        }
+
         .receipt-card {
-            background: #ffffff; border: 2px dashed var(--primary); border-radius: 16px;
-            padding: 32px; max-width: 450px; margin: 0 auto; position: relative;
+            background: #ffffff;
+            border: 2px dashed var(--primary);
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 450px;
+            margin: 0 auto;
+            position: relative;
         }
-        .receipt-item { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f5f9; }
-        .receipt-label { color: var(--text-secondary); font-weight: 600; font-size: 0.85rem; }
-        .receipt-value { font-weight: 700; color: var(--text-primary); }
+
+        .receipt-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .receipt-label {
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .receipt-value {
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
         .voting-id-badge {
-            background: #eff6ff; color: var(--primary); padding: 8px 16px; border-radius: 8px;
-            font-family: 'Courier New', Courier, monospace; font-weight: 800; letter-spacing: 2px;
-            display: inline-block; margin-top: 8px;
+            background: #eff6ff;
+            color: var(--primary);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: 800;
+            letter-spacing: 2px;
+            display: inline-block;
+            margin-top: 8px;
         }
+
         .voted-status-card {
-            background: #f8fafc; border: 1px solid var(--border); border-radius: 20px;
-            padding: 48px; text-align: center;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 48px;
+            text-align: center;
         }
     </style>
 </head>
+
 <body>
     <div class="dashboard-container" id="dashboardContent">
         <header class="navbar">
-            <div class="brand"><h1 style="font-size: 1.5rem; margin-bottom: 0;">ElectraVoter</h1></div>
-            <div class="user-tag">Welcome, <span id="userName">{{ name }}</span> | <a href="/logout" style="color: var(--error); text-decoration: none; margin-left: 8px;">Logout</a></div>
+            <div class="brand">
+                <h1 style="font-size: 1.5rem; margin-bottom: 0;">ElectraVoter</h1>
+            </div>
+            <div class="user-tag">Welcome, <span id="userName">{{ name }}</span> | <a href="/logout"
+                    style="color: var(--error); text-decoration: none; margin-left: 8px;">Logout</a></div>
         </header>
 
         {% if voting_status != 'active' or target_ts %}
-        <div id="statusNotification" style="background: {% if voting_status == 'ended' %}#fef2f2{% elif voting_status == 'not_started' %}#eff6ff{% else %}#ecfdf5{% endif %}; border: 1px solid {% if voting_status == 'ended' %}#fee2e2{% elif voting_status == 'not_started' %}#dbeafe{% else %}#10b981{% endif %}; padding: 16px; border-radius: 12px; margin-bottom: 24px; text-align: center;">
-            <p id="statusMsg" style="font-weight: 700; color: {% if voting_status == 'ended' %}#dc2626{% elif voting_status == 'not_started' %}#2563eb{% else %}#059669{% endif %}; margin-bottom: 8px;">{{ status_message }}</p>
+        <div id="statusNotification"
+            style="background: {% if voting_status == 'ended' %}#fef2f2{% elif voting_status == 'not_started' %}#eff6ff{% else %}#ecfdf5{% endif %}; border: 1px solid {% if voting_status == 'ended' %}#fee2e2{% elif voting_status == 'not_started' %}#dbeafe{% else %}#10b981{% endif %}; padding: 16px; border-radius: 12px; margin-bottom: 24px; text-align: center;">
+            <p id="statusMsg"
+                style="font-weight: 700; color: {% if voting_status == 'ended' %}#dc2626{% elif voting_status == 'not_started' %}#2563eb{% else %}#059669{% endif %}; margin-bottom: 8px;">
+                {{ status_message }}</p>
             {% if target_ts %}
-            <div id="countdown" style="font-family: monospace; font-size: 1.25rem; font-weight: 800; color: var(--text-primary);">
+            <div id="countdown"
+                style="font-family: monospace; font-size: 1.25rem; font-weight: 800; color: var(--text-primary);">
                 00:00:00:00
             </div>
             {% endif %}
@@ -60,11 +129,15 @@
         <div class="voted-status-card">
             <div style="font-size: 4rem; margin-bottom: 24px;">⛔</div>
             <h2 style="font-size: 1.75rem; margin-bottom: 12px;">You have already Voted!</h2>
-            <p style="color: var(--text-secondary); margin-bottom: 32px;">Multiple votes from the same student account are not permitted. Your transaction is securely recorded.</p>
+            <p style="color: var(--text-secondary); margin-bottom: 32px;">Multiple votes from the same student account
+                are not permitted. Your transaction is securely recorded.</p>
             <div style="border-top: 1px solid var(--border); padding-top: 24px;">
-                <p style="font-size: 0.85rem; color: var(--text-secondary);">If you haven't saved your receipt, please contact the administration.</p>
+                <p style="font-size: 0.85rem; color: var(--text-secondary);">If you haven't saved your receipt, please
+                    contact the administration.</p>
             </div>
-            <a href="/logout" class="btn" style="max-width: 250px; margin: 32px auto 0; background: #f1f5f9; color: var(--text-primary);">Finish & Logout</a>
+            <a href="/logout" class="btn"
+                style="max-width: 250px; margin: 32px auto 0; background: #f1f5f9; color: var(--text-primary);">Finish &
+                Logout</a>
         </div>
         {% else %}
         <div id="votingGridView">
@@ -81,8 +154,11 @@
                         <div class="candidate-card" onclick="selectCandidate('{{ cat }}', '{{ c.id }}')">
                             <img src="{{ c.image }}" alt="{{ c.name }}" class="candidate-image">
                             <div class="candidate-name">{{ c.name }}</div>
-                            <div class="vote-btn-mock" id="btn_{{ cat }}_{{ c.id }}"><span class="btn-text">Select to Vote</span></div>
-                            <input type="radio" name="{{ cat }}" value="{{ c.id }}" data-name="{{ c.name }}" data-category="{{ cat }}" data-img="{{ c.image }}" id="{{ cat }}_{{ c.id }}" class="vote-radio" required style="display:none">
+                            <div class="vote-btn-mock" id="btn_{{ cat }}_{{ c.id }}"><span class="btn-text">Select to
+                                    Vote</span></div>
+                            <input type="radio" name="{{ cat }}" value="{{ c.id }}" data-name="{{ c.name }}"
+                                data-category="{{ cat }}" data-img="{{ c.image }}" id="{{ cat }}_{{ c.id }}"
+                                class="vote-radio" required style="display:none">
                         </div>
                         {% endfor %}
                     </div>
@@ -90,9 +166,12 @@
                 {% endfor %}
                 <div class="submit-container">
                     {% if voting_status == 'active' %}
-                    <button type="button" onclick="showConfirmation()" id="reviewBtn" class="btn" style="max-width: 320px; margin: 0 auto;">Next Step: Confirm Vote</button>
+                    <button type="button" onclick="showConfirmation()" id="reviewBtn" class="btn"
+                        style="max-width: 320px; margin: 0 auto;">Next Step: Confirm Vote</button>
                     {% else %}
-                    <button type="button" disabled class="btn" style="max-width: 320px; margin: 0 auto; background: #cbd5e1; cursor: not-allowed;">Voting Closed</button>
+                    <button type="button" disabled class="btn"
+                        style="max-width: 320px; margin: 0 auto; background: #cbd5e1; cursor: not-allowed;">Voting
+                        Closed</button>
                     {% endif %}
                     <div id="voteMessage" class="message"></div>
                 </div>
@@ -101,11 +180,18 @@
         {% endif %}
 
         <div id="confirmationView" style="display: none; text-align: center; padding: 20px 0;">
-            <div class="brand" style="text-align: center; margin-bottom: 40px;"><h2>Confirm Selection</h2><p>Verify your choice and confirm your vote.</p></div>
-            <div id="confirmationList" style="display: flex; flex-direction: column; gap: 20px; max-width: 500px; margin: 0 auto 48px;">
+            <div class="brand" style="text-align: center; margin-bottom: 40px;">
+                <h2>Confirm Selection</h2>
+                <p>Verify your choice and confirm your vote.</p>
+            </div>
+            <div id="confirmationList"
+                style="display: flex; flex-direction: column; gap: 20px; max-width: 500px; margin: 0 auto 48px;">
                 <!-- Dynamically Populated -->
             </div>
-            <div style="display: flex; gap: 12px; justify-content: center; max-width: 500px; margin: 0 auto;"><button type="button" onclick="hideConfirmation()" class="btn" style="background: #f1f5f9; color: var(--text-primary);">Edit Choices</button><button type="button" onclick="finalSubmit()" id="finalSubmitBtn" class="btn">Confirm & Submit Vote</button></div>
+            <div style="display: flex; gap: 12px; justify-content: center; max-width: 500px; margin: 0 auto;"><button
+                    type="button" onclick="hideConfirmation()" class="btn"
+                    style="background: #f1f5f9; color: var(--text-primary);">Edit Choices</button><button type="button"
+                    onclick="finalSubmit()" id="finalSubmitBtn" class="btn">Confirm & Submit Vote</button></div>
             <div id="finalMessage" class="message"></div>
         </div>
     </div>
@@ -115,18 +201,35 @@
         <div style="font-size: 4rem; margin-bottom: 24px;">✅</div>
         <h1 style="color: var(--success); margin-bottom: 24px;">Vote Recorded</h1>
         <div class="receipt-card" id="receiptArea">
-            <div style="margin-bottom: 24px; text-align: center;"><h3 style="font-size: 1.25rem; font-weight: 800;">OFFICIAL VOTING RECEIPT</h3><p style="font-size: 0.75rem; color: var(--text-secondary);">Audit generated by ElectraVoter System</p></div>
-            <div class="receipt-item"><span class="receipt-label">Student Name</span><span class="receipt-value" id="res_name">-</span></div>
-            <div class="receipt-item"><span class="receipt-label">USN</span><span class="receipt-value" id="res_usn">-</span></div>
-            <div class="receipt-item" style="flex-direction: column; align-items: center; border-bottom: none; margin-top: 16px;"><span class="receipt-label">UNIQUE VOTING ID</span><span class="voting-id-badge" id="res_voting_id">-</span></div>
-            <div style="margin-top: 32px; border-top: 1px solid #f1f5f9; padding-top: 16px; font-size: 0.7rem; color: var(--text-secondary);">* Keep this Transaction ID for your records to verify your vote.</div>
+            <div style="margin-bottom: 24px; text-align: center;">
+                <h3 style="font-size: 1.25rem; font-weight: 800;">OFFICIAL VOTING RECEIPT</h3>
+                <p style="font-size: 0.75rem; color: var(--text-secondary);">Audit generated by ElectraVoter System</p>
+            </div>
+            <div class="receipt-item"><span class="receipt-label">Student Name</span><span class="receipt-value"
+                    id="res_name">-</span></div>
+            <div class="receipt-item"><span class="receipt-label">USN</span><span class="receipt-value"
+                    id="res_usn">-</span></div>
+            <div class="receipt-item"
+                style="flex-direction: column; align-items: center; border-bottom: none; margin-top: 16px;"><span
+                    class="receipt-label">UNIQUE VOTING ID</span><span class="voting-id-badge"
+                    id="res_voting_id">-</span></div>
+            <div
+                style="margin-top: 32px; border-top: 1px solid #f1f5f9; padding-top: 16px; font-size: 0.7rem; color: var(--text-secondary);">
+                * Keep this Transaction ID for your records to verify your vote.</div>
         </div>
         <div style="margin-top: 40px; display: flex; flex-direction: column; align-items: center; gap: 16px;">
             <button onclick="downloadReceipt()" class="btn" style="max-width: 280px; background: #334155;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
                 Download Receipt as PDF
             </button>
-            <button onclick="location.reload()" class="btn" style="max-width: 250px; background: #f1f5f9; color: var(--text-primary);">Finish & Back to Dashboard</button>
+            <button onclick="location.reload()" class="btn"
+                style="max-width: 250px; background: #f1f5f9; color: var(--text-primary);">Finish & Back to
+                Dashboard</button>
         </div>
     </div>
 
@@ -134,7 +237,7 @@
         {% if target_ts %}
         const targetTime = {{ target_ts }} * 1000;
         const statusType = "{{ voting_status }}";
-        
+
         // 🕰️ Format time in User's Local Timezone
         const localDT = new Date(targetTime).toLocaleString([], {
             hour: '2-digit', minute: '2-digit', hour12: true,
@@ -158,7 +261,7 @@
             if (distance < 0) {
                 clearInterval(countdownTimer);
                 document.getElementById('countdown').innerHTML = "EXPIRED";
-                location.reload(); 
+                location.reload();
                 return;
             }
 
@@ -167,10 +270,10 @@
             const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
             const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
-            document.getElementById('countdown').innerHTML = 
-                (days > 0 ? days + "d " : "") + 
-                hours.toString().padStart(2, '0') + ":" + 
-                minutes.toString().padStart(2, '0') + ":" + 
+            document.getElementById('countdown').innerHTML =
+                (days > 0 ? days + "d " : "") +
+                hours.toString().padStart(2, '0') + ":" +
+                minutes.toString().padStart(2, '0') + ":" +
                 seconds.toString().padStart(2, '0');
         }, 1000);
         {% endif %}
@@ -271,4 +374,5 @@
         }
     </script>
 </body>
+
 </html>

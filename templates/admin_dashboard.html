@@ -67,12 +67,12 @@
                         <div>
                             <label style="font-size: 0.7rem; font-weight: 800; color: var(--text-secondary);">START TIME</label>
                             <input type="datetime-local" id="startTime" class="form-control" style="width: 100%;" value="{{ time.strftime('%Y-%m-%dT%H:%M', time.localtime(settings.voting_start_time)) if settings.voting_start_time else '' }}">
-                            <p style="font-size: 0.65rem; margin-top: 4px; color: var(--text-secondary);">Stored (Local): <span id="startPreview">-</span></p>
+                            <p style="font-size: 0.65rem; margin-top: 4px; color: var(--text-secondary);">Stored: {{ time.strftime('%I:%M %p, %d %b %Y', time.localtime(settings.voting_start_time)) if settings.voting_start_time else 'None' }}</p>
                         </div>
                         <div>
                             <label style="font-size: 0.7rem; font-weight: 800; color: var(--text-secondary);">END TIME</label>
                             <input type="datetime-local" id="endTime" class="form-control" style="width: 100%;" value="{{ time.strftime('%Y-%m-%dT%H:%M', time.localtime(settings.voting_end_time)) if settings.voting_end_time else '' }}">
-                            <p style="font-size: 0.65rem; margin-top: 4px; color: var(--text-secondary);">Stored (Local): <span id="endPreview">-</span></p>
+                            <p style="font-size: 0.65rem; margin-top: 4px; color: var(--text-secondary);">Stored: {{ time.strftime('%I:%M %p, %d %b %Y', time.localtime(settings.voting_end_time)) if settings.voting_end_time else 'None' }}</p>
                         </div>
                         <button class="btn btn-small" style="background: var(--primary); color: white; margin-top: 8px;" onclick="updateSchedule()">Save Schedule</button>
                     </div>
@@ -158,26 +158,6 @@
             const label = document.getElementById('fileLabel');
             label.innerText = input.files[0] ? input.files[0].name : 'Click to Upload Image';
         }
-
-        // 🕰️ Admin Time Preview Logic
-        function updatePreviews() {
-            const startVal = document.getElementById('startTime').value;
-            const endVal = document.getElementById('endTime').value;
-            
-            const startPreview = document.getElementById('startPreview');
-            const endPreview = document.getElementById('endPreview');
-
-            if (startVal) {
-                startPreview.innerText = new Date(startVal).toLocaleString([], { hour: '2-digit', minute: '2-digit', hour12: true, day: 'numeric', month: 'short' });
-            }
-            if (endVal) {
-                endPreview.innerText = new Date(endVal).toLocaleString([], { hour: '2-digit', minute: '2-digit', hour12: true, day: 'numeric', month: 'short' });
-            }
-        }
-
-        document.getElementById('startTime').addEventListener('change', updatePreviews);
-        document.getElementById('endTime').addEventListener('change', updatePreviews);
-        window.addEventListener('DOMContentLoaded', updatePreviews);
 
         function displayChart(category) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
