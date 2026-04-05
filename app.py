@@ -18,34 +18,14 @@ MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
 client = MongoClient(MONGO_URI)
 db = client['electravoter_db']
 cdb = db['candidates']
+cdb = db['candidates']
 vdb = db['votes']
 sdb = db['settings']
 
-# ---- WHATSAPP (GREEN API) SETUP ----
+# ---- WHATSAPP (GREEN API) SETUP (INACTIVE) ----
 WA_ID = os.getenv("WHATSAPP_ID_INSTANCE")
 WA_TOKEN = os.getenv("WHATSAPP_API_TOKEN")
 WA_URL = os.getenv("WHATSAPP_API_URL")
-
-def send_whatsapp_message(phone, message):
-    if not WA_ID or not WA_TOKEN:
-        print("WA Credentials missing.")
-        return False
-        
-    # Standard formats: 919876543210 (remove +)
-    clean_phone = re.sub(r'\D', '', phone)
-    if not clean_phone.endswith("@c.us"):
-        clean_phone = f"{clean_phone}@c.us"
-        
-    url = f"{WA_URL}/waInstance{WA_ID}/sendMessage/{WA_TOKEN}"
-    payload = {"chatId": clean_phone, "message": message}
-    headers = {'Content-Type': 'application/json'}
-    
-    try:
-        response = requests.post(url, json=payload, headers=headers)
-        return response.status_code == 200
-    except Exception as e:
-        print(f"WhatsApp Error: {e}")
-        return False
 
 def get_settings():
     settings = sdb.find_one({"id": "global_settings"})
@@ -129,21 +109,12 @@ def send_otp():
     if vdb.find_one({"$or": [{"phone": phone}, {"usn": usn}, {"user_hash": user_hash}]}):
         return jsonify({"success": False, "message": "You have already voted"}), 403
         
-    # 🔒 SECURE OTP GENERATION
-    otp = str(random.randint(100000, 999999))
-    expires = time.time() + 120 # 2 Minutes
+    # 🔒 MOCK OTP GENERATION (FOR PRESENTATION)
+    otp = "123456"
+    expires = time.time() + 300 # 5 Minutes for Demo
     otp_store[phone] = {"otp": otp, "expires": expires, "name": name, "usn": usn}
     
-    # 📲 REAL WHATSAPP DELIVERY
-    message = f"🔒 *Your ElectraVoter OTP is: {otp}*\n\nThis OTP will expire in 2 minutes. Do not share this with anyone."
-    distributed = send_whatsapp_message(phone, message)
-    
-    if distributed:
-        return jsonify({"success": True, "message": f"OTP sent successfully to your WhatsApp at {phone[-4:].rjust(len(phone), '*')}"})
-    else:
-        # Fallback for presentation if API fails
-        print(f"API Failed. Mock Mode: OTP for {phone} is {otp}")
-        return jsonify({"success": True, "message": f"OTP Mode Active. System simulated OTP delivery (Mock: {otp})"}), 200
+    return jsonify({"success": True, "message": f"OTP (123456) sent to your device."})
 
 @app.route('/verify-page')
 def verify_page():
@@ -156,24 +127,19 @@ def verify_otp():
     phone = data.get('phone')
     otp_input = data.get('otp')
     
+    # In presentation mode, we only check for 123456 and session presence
     if not phone or phone not in otp_store:
-        return jsonify({"success": False, "message": "Session expired. Try again"}), 401
+        return jsonify({"success": False, "message": "Session expired"}), 401
     
-    stored_data = otp_store[phone]
-    if time.time() > stored_data['expires']:
-        return jsonify({"success": False, "message": "OTP Expired"}), 401
-        
-    if otp_input != stored_data['otp']:
+    if otp_input != "123456":
         return jsonify({"success": False, "message": "Invalid OTP"}), 401
         
+    stored_data = otp_store[phone]
     session['authenticated'] = True
     session['user_name'] = stored_data['name']
     session['usn'] = stored_data['usn']
     session['phone'] = phone
     session['has_voted'] = vdb.find_one({"usn": session['usn']}) is not None
-    
-    # Clear OTP after verification
-    del otp_store[phone]
     
     return jsonify({"success": True})
 
