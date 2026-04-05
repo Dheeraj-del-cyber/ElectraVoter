@@ -45,15 +45,15 @@ def check_voting_status():
         
     # Check Start Time if set
     if start_time is not None and current_time < start_time:
-        return "not_started", f"Voting has not started yet. Starts at {time.strftime('%Y-%m-%d %H:%M', time.localtime(start_time))}", start_time
+        return "not_started", f"Voting has not started yet. Starts at {time.strftime('%I:%M %p, %d %b %Y', time.localtime(start_time))}", start_time
     
     # Check End Time if set
     if end_time is not None and current_time > end_time:
-        return "ended", f"Voting has ended. Finished at {time.strftime('%Y-%m-%d %H:%M', time.localtime(end_time))}", end_time
+        return "ended", f"Voting has ended. Finished at {time.strftime('%I:%M %p, %d %b %Y', time.localtime(end_time))}", end_time
         
     # If we are between start and end, or only one is set and we are within it
     if end_time is not None:
-        return "active", f"Voting ends at {time.strftime('%Y-%m-%d %H:%M', time.localtime(end_time))}", end_time
+        return "active", f"Voting ends at {time.strftime('%I:%M %p, %d %b %Y', time.localtime(end_time))}", end_time
     
     return "active", "Voting is currently open", None
 
@@ -285,17 +285,13 @@ def update_settings():
     end_time_str = data.get('end_time')
     
     try:
-        def parse_dt(dt_str):
-            if not dt_str: return None
-            for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M"):
-                try:
-                    return time.mktime(time.strptime(dt_str, fmt))
-                except ValueError:
-                    continue
-            raise ValueError(f"Invalid format: {dt_str}")
-
-        start_ts = parse_dt(start_time_str)
-        end_ts = parse_dt(end_time_str)
+        # Now receiving direct timestamps from Frontend
+        start_ts = data.get('start_time')
+        end_ts = data.get('end_time')
+        
+        # Ensure they are integers if not None
+        if start_ts is not None: start_ts = int(start_ts)
+        if end_ts is not None: end_ts = int(end_ts)
         
         sdb.update_one({"id": "global_settings"}, {"$set": {
             "voting_start_time": start_ts,
@@ -357,7 +353,7 @@ def verify_vote_status():
         return jsonify({
             "success": True, 
             "status": "Counted", 
-            "timestamp": time.strftime('%Y-%m-%d %H:%M', time.localtime(vote['timestamp'])),
+            "timestamp": time.strftime('%I:%M %p, %d %b %Y', time.localtime(vote['timestamp'])),
             "usn": f"***{vote['usn'][-4:]}" # Partially masked for privacy
         })
     return jsonify({"success": False, "status": "Not Found"})

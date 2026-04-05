@@ -67,10 +67,12 @@
                         <div>
                             <label style="font-size: 0.7rem; font-weight: 800; color: var(--text-secondary);">START TIME</label>
                             <input type="datetime-local" id="startTime" class="form-control" style="width: 100%;" value="{{ time.strftime('%Y-%m-%dT%H:%M', time.localtime(settings.voting_start_time)) if settings.voting_start_time else '' }}">
+                            <p style="font-size: 0.65rem; margin-top: 4px; color: var(--text-secondary);">Stored: {{ time.strftime('%I:%M %p, %d %b %Y', time.localtime(settings.voting_start_time)) if settings.voting_start_time else 'None' }}</p>
                         </div>
                         <div>
                             <label style="font-size: 0.7rem; font-weight: 800; color: var(--text-secondary);">END TIME</label>
                             <input type="datetime-local" id="endTime" class="form-control" style="width: 100%;" value="{{ time.strftime('%Y-%m-%dT%H:%M', time.localtime(settings.voting_end_time)) if settings.voting_end_time else '' }}">
+                            <p style="font-size: 0.65rem; margin-top: 4px; color: var(--text-secondary);">Stored: {{ time.strftime('%I:%M %p, %d %b %Y', time.localtime(settings.voting_end_time)) if settings.voting_end_time else 'None' }}</p>
                         </div>
                         <button class="btn btn-small" style="background: var(--primary); color: white; margin-top: 8px;" onclick="updateSchedule()">Save Schedule</button>
                     </div>
@@ -229,18 +231,22 @@
         });
 
         async function updateSchedule() {
-            const startTime = document.getElementById('startTime').value;
-            const endTime = document.getElementById('endTime').value;
+            const startStr = document.getElementById('startTime').value;
+            const endStr = document.getElementById('endTime').value;
             
-            if (!startTime || !endTime) {
+            if (!startStr || !endStr) {
                 alert("Please set both start and end times");
                 return;
             }
 
+            // Convert to absolute timestamps (UTC) in Frontend to avoid Timezone issues
+            const startTimeTs = Math.floor(new Date(startStr).getTime() / 1000);
+            const endTimeTs = Math.floor(new Date(endStr).getTime() / 1000);
+
             const res = await fetch('/update-settings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ start_time: startTime, end_time: endTime })
+                body: JSON.stringify({ start_time: startTimeTs, end_time: endTimeTs })
             });
 
             const result = await res.json();
