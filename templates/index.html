@@ -99,6 +99,20 @@
 
         {% if target_ts %}
         const targetTime = {{ target_ts }} * 1000;
+        const statusType = "{{ voting_status }}";
+        
+        // 🕰️ Format time in User's Local Timezone
+        const localDT = new Date(targetTime).toLocaleString([], {
+            hour: '2-digit', minute: '2-digit', hour12: true,
+            day: 'numeric', month: 'short', year: 'numeric'
+        });
+
+        // 📝 Set Initial Status Message Locally
+        const statusMsg = document.getElementById('statusMsg');
+        if (statusType === "not_started") statusMsg.innerText = `Voting starts at ${localDT}`;
+        else if (statusType === "ended") statusMsg.innerText = `Voting ended at ${localDT}`;
+        else if (statusType === "active") statusMsg.innerText = `Voting active until ${localDT}`;
+
         const countdownTimer = setInterval(() => {
             const now = new Date().getTime();
             const distance = targetTime - now;

@@ -45,15 +45,15 @@ def check_voting_status():
         
     # Check Start Time if set
     if start_time is not None and current_time < start_time:
-        return "not_started", f"Voting has not started yet. Starts at {time.strftime('%I:%M %p, %d %b %Y', time.localtime(start_time))}", start_time
+        return "not_started", "Voting has not started yet", start_time
     
     # Check End Time if set
     if end_time is not None and current_time > end_time:
-        return "ended", f"Voting has ended. Finished at {time.strftime('%I:%M %p, %d %b %Y', time.localtime(end_time))}", end_time
+        return "ended", "Voting has ended", end_time
         
     # If we are between start and end, or only one is set and we are within it
     if end_time is not None:
-        return "active", f"Voting ends at {time.strftime('%I:%M %p, %d %b %Y', time.localtime(end_time))}", end_time
+        return "active", "Voting is active", end_time
     
     return "active", "Voting is currently open", None
 
